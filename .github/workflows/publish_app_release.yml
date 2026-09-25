@@ -13,10 +13,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 签出代码
+      # 签出代码（不要写死 ref: master，tag 触发时会出错）
       - uses: actions/checkout@v4
-        with:
-          ref: master
 
       # APK 签名设置
       - name: Download Android keystore
@@ -40,11 +38,11 @@ jobs:
           java-version: "17"
           cache: "gradle"
 
-      # 设置 Flutter
+      # 设置 Flutter（请改成你项目真实使用的版本）
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          flutter-version: "3.35.x"
           cache: true
 
       # 打开 macOS Desktop 支持
@@ -59,11 +57,13 @@ jobs:
 
       # 安装 appdmg
       - name: Install appdmg
-        run: npm install -g appdmg
+        run: sudo npm install -g appdmg
 
       # 设置 flutter_distributor 环境
       - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+        run: |
+          dart pub global activate flutter_distributor
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       # 打包 APK
       - name: Build APK
@@ -97,9 +97,9 @@ jobs:
           zip -q -r ios_no_sign.ipa Payload
           cd ../../..
 
-      # 上传 IPA 至 Artifacts
+      # 上传 IPA 至 Artifacts（修复缩进）
       - name: Upload IPA to Artifacts
-      uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: ios
           path: |
@@ -120,87 +120,6 @@ jobs:
             simple_live_app/build/dist/*/*.dmg
             simple_live_app/build/dist/*/*.zip
 
-      # 获取版本信息（自动从 Git Tag 提取；如果是 workflow_dispatch，则 GITHUB_REF 为空，你可以改成固定版本）
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Echo version
-        run: echo "${{ steps.version.outputs.VERSION }}"
-
-      # 上传至 Release
-      - name: Upload Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }} # 使用你的 PAT 或 GITHUB_TOKEN
-        with:
-          name: "${{ steps.version.outputs.VERSION }}"
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
-          files: |
-            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
-            simple_live_app/build/dist/*/*.dmg
-            simple_live_app/build/dist/*/*.zip
-
-      # 完成
-      - run: echo "🍏 This job's status is ${{ job.status }}."
-
-  build-linux:
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      # 签出代码
-      - uses: actions/checkout@v4
-        with:
-          ref: master
-
-      # 设置 Flutter 环境
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.38.x"
-          cache: true
-
-      # 安装依赖
-      - name: Update apt-get
-        run: sudo apt-get update
-
-      - name: Install Dependencies
-        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
-
-      # 打开 Linux Desktop 支持
-      - name: Enable Flutter Desktop
-        run: flutter config --enable-linux-desktop
-
-      # 更新 Flutter 的 packages
-      - name: Restore Packages
-        run: |
-          cd simple_live_app
-          flutter pub get
-
-      # 设置 flutter_distributor 环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
-
-      # 打包 Linux
-      - name: Build Linux
-        run: |
-          cd simple_live_app
-          flutter_distributor package --platform linux --targets deb,zip --skip-clean
-
-      # 上传 Linux 包至 Artifacts
-      - name: Upload Linux APP to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux
-          path: |
-            simple_live_app/build/dist/*/*.deb
-            simple_live_app/build/dist/*/*.zip
-
       # 获取版本信息
       - name: Get version from tag
         id: version
@@ -219,10 +138,79 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           files: |
+            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+            simple_live_app/build/dist/*/*.dmg
+            simple_live_app/build/dist/*/*.zip
+
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.x"
+          cache: true
+
+      - name: Update apt-get
+        run: sudo apt-get update
+
+      - name: Install Dependencies
+        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        run: |
+          dart pub global activate flutter_distributor
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Build Linux
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform linux --targets deb,zip --skip-clean
+
+      - name: Upload Linux APP to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
 
-      # 完成
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Echo version
+        run: echo "${{ steps.version.outputs.VERSION }}"
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+          files: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip
+
       - run: echo "🍏 Linux job's status is ${{ job.status }}."
 
   build-windows:
@@ -230,12 +218,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 签出代码
       - uses: actions/checkout@v4
-        with:
-          ref: master
 
-      # 设置 Flutter 环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -250,17 +234,16 @@ jobs:
           cd simple_live_app
           flutter pub get
 
-      # 设置 flutter_distributor 环境
       - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+        run: |
+          dart pub global activate flutter_distributor
+          echo "$env:USERPROFILE\AppData\Local\Pub\Cache\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      # 打包 Windows
       - name: Build Windows
         run: |
           cd simple_live_app
           flutter_distributor package --platform windows --targets msix,zip --skip-clean
 
-      # 上传 Windows 至 Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -269,7 +252,6 @@ jobs:
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
-      # 获取版本信息
       - name: Get version from tag
         id: version
         shell: bash
@@ -278,7 +260,6 @@ jobs:
       - name: Echo version
         run: echo "${{ steps.version.outputs.VERSION }}"
 
-      # 上传至 Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         env:
@@ -291,5 +272,4 @@ jobs:
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
-      # 完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."
