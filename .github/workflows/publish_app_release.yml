@@ -13,13 +13,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 签出代码（不要写死 ref: master，tag 触发时会出错）
-      - uses: actions/checkout@v4
+      # 签出代码（升级到 v5，Node.js 24）
+      - uses: actions/checkout@v5
 
-      # APK 签名设置
+      # APK 签名设置（升级到 v2）
       - name: Download Android keystore
         id: android_keystore
-        uses: timheuer/base64-to-file@v1.2
+        uses: timheuer/base64-to-file@v2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.KEYSTORE_BASE64 }}
@@ -31,8 +31,8 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
 
-      # 设置 JAVA 环境
-      - uses: actions/setup-java@v4
+      # 设置 JAVA 环境（升级到 v5，Node.js 24）
+      - uses: actions/setup-java@v5
         with:
           distribution: "zulu"
           java-version: "17"
@@ -71,9 +71,9 @@ jobs:
           cd simple_live_app
           flutter build apk --release --split-per-abi
 
-      # 上传 APK 至 Artifacts
+      # 上传 APK 至 Artifacts（升级到 v5）
       - name: Upload APK to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: android
           path: |
@@ -97,9 +97,9 @@ jobs:
           zip -q -r ios_no_sign.ipa Payload
           cd ../../..
 
-      # 上传 IPA 至 Artifacts（修复缩进）
+      # 上传 IPA 至 Artifacts（升级到 v5）
       - name: Upload IPA to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ios
           path: |
@@ -111,9 +111,9 @@ jobs:
           cd simple_live_app
           flutter_distributor package --platform macos --targets dmg,zip --skip-clean
 
-      # 上传 macOS 至 Artifacts
+      # 上传 macOS 至 Artifacts（升级到 v5）
       - name: Upload MacOS to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mac
           path: |
@@ -128,11 +128,9 @@ jobs:
       - name: Echo version
         run: echo "${{ steps.version.outputs.VERSION }}"
 
-      # 上传至 Release
+      # 上传至 Release（升级到 v3，Node.js 24）
       - name: Upload Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
           name: "${{ steps.version.outputs.VERSION }}"
           generate_release_notes: true
@@ -152,7 +150,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      # 签出代码（升级到 v5）
+      - uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -184,8 +183,9 @@ jobs:
           cd simple_live_app
           flutter_distributor package --platform linux --targets deb,zip --skip-clean
 
+      # 上传 Linux 包至 Artifacts（升级到 v5）
       - name: Upload Linux APP to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: linux
           path: |
@@ -199,10 +199,9 @@ jobs:
       - name: Echo version
         run: echo "${{ steps.version.outputs.VERSION }}"
 
+      # 上传至 Release（升级到 v3）
       - name: Upload Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
           name: "${{ steps.version.outputs.VERSION }}"
           generate_release_notes: true
@@ -218,7 +217,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      # 签出代码（升级到 v5）
+      - uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -244,8 +244,9 @@ jobs:
           cd simple_live_app
           flutter_distributor package --platform windows --targets msix,zip --skip-clean
 
+      # 上传 Windows 至 Artifacts（升级到 v5）
       - name: Upload Windows APP to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows
           path: |
@@ -260,10 +261,9 @@ jobs:
       - name: Echo version
         run: echo "${{ steps.version.outputs.VERSION }}"
 
+      # 上传至 Release（升级到 v3）
       - name: Upload Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
           name: "${{ steps.version.outputs.VERSION }}"
           generate_release_notes: true
